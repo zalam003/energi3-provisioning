@@ -622,7 +622,7 @@ _install_energi () {
   fi
   
   # Check if v3.1+ is available on Github
-  if _version_gt ${GIT_LATEST} 3.0.99; then
+  if ! _version_gt ${GIT_LATEST} 3.0.99; then
     ENERGI_EXE=energi3
     ENERGI_HOME=${USRHOME}/energi3
   fi
