@@ -200,7 +200,7 @@ _add_nrgstaker () {
   fi
 
   export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
-  export ENERGI_HOME=${USRHOME}/energi
+  export ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
   
   ${SUDO} usermod -aG sudo ${USRNAME}
   ${SUDO} touch /home/${USRNAME}/.sudo_as_admin_successful
@@ -1201,7 +1201,7 @@ _download_bootstrap () {
 
   if [[ ${EUID} = 0 ]]
   then
-    chown -R "${USRNAME}":"${USRNAME}" ${CONF_DIR}
+    chown -R "${USRNAME}":"${USRNAME}" ${USRHOME}/.energicore3
   fi
 
 }
