@@ -1221,6 +1221,7 @@ _copy_keystore() {
     
     echo "Keystore Account ${ACCTNUM} copied to:"
     echo "${CONF_DIR}/keystore on VPS"
+    echo
     
   done
 
@@ -1230,13 +1231,14 @@ _download_bootstrap () {
   
   # Download latest bootstrap and extract it
   echo "Downloading latest bootstrap..."
-  sleep 1
+  sleep 3
   cd ${USRHOME}
   curl -s ${BOOTSTRAP_URL} | tar xvz
 
   # Change ownership if downloaded as root
   if [[ ${EUID} = 0 ]]
   then
+    echo "  Changing ownership to ${USRNAME}"
     chown -R "${USRNAME}":"${USRNAME}" ${USRHOME}/.energicore3
   fi
 
