@@ -597,6 +597,13 @@ SYSTEMD_CONF
   fi
 }
 
+_version_gt() { 
+
+  # Check if FIRST version is greater than SECOND version
+  test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; 
+  
+}
+
 _install_energi () {
 
   # Download and install node software and supporting scripts
@@ -672,13 +679,6 @@ _install_energi () {
   
   # Change to install directory
   cd
-  
-}
-
-_version_gt() { 
-
-  # Check if FIRST version is greater than SECOND version
-  test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; 
   
 }
 
