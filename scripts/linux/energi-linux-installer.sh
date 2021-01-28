@@ -64,17 +64,17 @@ export S3URL=${S3URL:-"https://s3-us-west-2.amazonaws.com/download.energi.softwa
 export ENERGI_CONF=energi.toml
 export ENERGI_IPC=energi3.ipc
 # Check Github for URL of latest version
-if [ -z "${GIT_LATEST}" ]
+if [ -z "${GIT_VERSION_NUM}" ]
 then
   GITHUB_LATEST=$( curl -s ${API_URL} )
-  GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
+  GIT_VERSION_TAG=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
   
   # Extract latest version number without the 'v'
-  GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+  GIT_VERSION_NUM=$( echo ${GIT_VERSION_TAG} | sed 's/v//g' )
 fi
 
 # Check if v3.1+ is available on Github
-if _version_gt ${GIT_LATEST} 3.0.99; then
+if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
   export ENERGI_EXE=energi
   export ENERGIPATH=Energi
 else
@@ -94,6 +94,7 @@ NC=`tput sgr0`
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 
 _os_arch () {
+
   # Check Architecture
   OSNAME=`grep ^NAME /etc/os-release | awk -F\" '{ print $2 }'`
   OSVERSIONLONG=`grep ^VERSION_ID /etc/os-release | awk -F\" '{ print $2 }'`
@@ -235,12 +236,13 @@ SUDO_CONF
   then
       chown ${USRNAME}:${USRNAME} /home/${USRNAME}/.sudo_as_admin_successful
   fi
- 
+
+  # Check if there PATH variable is set
   CHKBASHRC=`grep "${ENERGIPATH} PATH" "${USRHOME}/.bashrc"`
   if [ -z "${CHKBASHRC}" ]
   then
     echo "" >> "${USRHOME}/.bashrc"
-    echo "# Energi PATH" >> "${USRHOME}/.bashrc"
+    echo "# ${ENERGIPATH} PATH" >> "${USRHOME}/.bashrc"
     echo "export PATH=\${PATH}:\${HOME}/${ENERGI_EXE}/bin" >> "${USRHOME}/.bashrc"
     echo
     echo "  .bashrc updated with PATH variable"
@@ -366,22 +368,22 @@ _check_install () {
 _setup_appdir () {
 
   # Check Github for URL of latest version
-  if [ -z "${GIT_LATEST}" ]
+  if [ -z "${GIT_VERSION_NUM}" ]
   then
     GITHUB_LATEST=$( curl -s ${API_URL} )
     GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
     
     # Extract latest version number without the 'v'
-    GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+    GIT_VERSION_NUM=$( echo ${GIT_VERSION} | sed 's/v//g' )
   
     # Check if v3.1+ is available on Github
-    if _version_gt ${GIT_LATEST} 3.0.99; then
+    if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
       ENERGI_EXE=energi
-      ENERGI_HOME=${USRHOME}/energi    
+      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}    
     
     else
       ENERGI_EXE=energi3
-      ENERGI_HOME=${USRHOME}/energi3
+      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
     fi
   fi
 
@@ -443,8 +445,8 @@ _set_ismainnet () {
       echo "Core Node will be setup for Mainnet"
     else
       export CONF_DIR=${USRHOME}/.energicore3/testnet
-      export APPARG='--testnet'
       export FWPORT=49797
+      export APPARG='--testnet'
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/testnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.test.energi.network/"
       echo "Core Node will be setup for Testnet"
@@ -456,10 +458,15 @@ _set_ismainnet () {
     then
       export CONF_DIR=${USRHOME}/.energicore3
       export FWPORT=39797
+      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
+      export NEXUS_URL="https://nexus.energi.network/"
       echo "Core Node will be setup for Mainnet"
     else
       export CONF_DIR=${USRHOME}/.energicore3/testnet
       export FWPORT=49797
+      export APPARG='--testnet'
+      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/testnet/gen3-chaindata.tar.gz"
+      export NEXUS_URL="https://nexus.test.energi.network/"
       echo "Core Node will be setup for Testnet"
     fi
 
@@ -651,21 +658,21 @@ _install_energi () {
   JS_SCRIPT=utils.js
   
   # Check Github for URL of latest version
-  if [ -z "${GIT_LATEST}" ]
+  if [ -z "${GIT_VERSION_NUM}" ]
   then
     GITHUB_LATEST=$( curl -s ${API_URL} )
     GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
     
     # Extract latest version number without the 'v'
-    GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+    GIT_VERSION_NUM=$( echo ${GIT_VERSION} | sed 's/v//g' )
   
     # Check if v3.1+ is available on Github
-    if _version_gt ${GIT_LATEST} 3.0.99; then
+    if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
       ENERGI_EXE=energi
-      ENERGI_HOME=${USRHOME}/energi
+      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
     else
       ENERGI_EXE=energi3
-      ENERGI_HOME=${USRHOME}/energi3
+      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
     fi
   fi
   
@@ -674,33 +681,26 @@ _install_energi () {
   
   cd ${USRHOME}
   # Pull energi from Amazon S3
-  wget -4qo- "${S3URL}/${GIT_LATEST}/${ENERGI_EXE}-${GIT_LATEST}-linux-${OSARCH}.tgz" --show-progress --progress=bar:force:noscroll 2>&1
+  wget -4qo- "${S3URL}/${GIT_VERSION_NUM}/${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz" --show-progress --progress=bar:force:noscroll 2>&1
   sleep 0.3
   
-  tar xvfz ${ENERGI_EXE}-${GIT_LATEST}-linux-${OSARCH}.tgz
+  tar xvfz ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz
   sleep 0.3
   
   # Copy latest energi and cleanup
   if [[ -x "${ENERGI_EXE}" ]]
   then
-    mv ${ENERGI_EXE}-${GIT_LATEST}-linux-${OSARCH}/bin/${ENERGI_EXE} ${BIN_DIR}/.
-    rm -rf ${ENERGI_EXE}-${GIT_LATEST}-linux-${OSARCH}
+    mv ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}/bin/${ENERGI_EXE} ${BIN_DIR}/.
+    rm -rf ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}
   else
-    mv ${ENERGI_EXE}-${GIT_LATEST}-linux-${OSARCH} ${ENERGI_EXE}
+    mv ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH} ${ENERGI_EXE}
   fi
-  rm ${ENERGI_EXE}-${GIT_LATEST}-linux-${OSARCH}.tgz
+  rm ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz
   
   # Check if software downloaded
   if [ ! -d ${BIN_DIR} ]
   then
-    echo "${RED}ERROR: energi-${GIT_LATEST}-linux-${OSARCH}.tgz did not download${NC}"
-    sleep 5
-  fi
-  
-  # Check if software downloaded
-  if [ ! -d ${BIN_DIR} ]
-  then
-    echo "${RED}ERROR: energi-${GIT_LATEST}-linux-${OSARCH}.tgz did not download${NC}"
+    echo "${RED}ERROR: energi-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz did not download${NC}"
     sleep 5
   fi
   
@@ -727,19 +727,19 @@ _install_energi () {
 _upgrade_energi () {
   
   # Check Github for URL of latest version
-  if [ -z "${GIT_LATEST}" ]
+  if [ -z "${GIT_VERSION_NUM}" ]
   then
     GITHUB_LATEST=$( curl -s ${API_URL} )
     GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
     
     # Extract latest version number without the 'v'
-    GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+    GIT_VERSION_NUM=$( echo ${GIT_VERSION} | sed 's/v//g' )
   fi
 
   # Rename energi3 if 3.1.x and above is released
   if [[ -d ${USRHOME}/energi3 ]]
   then
-    if _version_gt ${GIT_LATEST} 3.0.99; then
+    if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
       mv ${USRHOME}/energi3/bin/energi3 ${USRHOME}/energi3/bin/energi
       mv ${USRHOME}/energi3 ${USRHOME}/energi
       ${SUDO} rm /etc/logrotate.d/energi3
@@ -760,7 +760,7 @@ _upgrade_energi () {
       
     else
       ENERGI_EXE=energi3
-      ENERGI_HOME=${USRHOME}/energi3
+      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
     fi
   fi
   
@@ -770,7 +770,7 @@ _upgrade_energi () {
   # Installed Version
   INSTALL_VERSION=$( ${BIN_DIR}/${ENERGI_EXE} version 2>/dev/null | grep "^Version" | awk '{ print $2 }' | awk -F\- '{ print $1 }' )
   
-  if _version_gt ${GIT_LATEST} ${INSTALL_VERSION}; then
+  if _version_gt ${GIT_VERSION_NUM} ${INSTALL_VERSION}; then
     echo "Installing newer version ${GIT_VERSION} from Github"
     if [[ -f "${CONF_DIR}/removedb-list.db" ]]
     then
@@ -791,6 +791,7 @@ _upgrade_energi () {
     echo "Latest version of Energi is installed: ${INSTALL_VERSION}"
     echo "Nothing to install"
     sleep 0.3
+    
   fi
 
 }
@@ -898,12 +899,14 @@ _remove_two_factor() {
   if [[ -f "${USRHOME}/.google_authenticator" ]]
   then
       rm -f "${USRHOME}/.google_authenticator"
+      echo "2FA has been removed for user ${USRNAME}!"
   fi
   
 }
 
 _setup_two_factor() {
 
+  # Setup 2FA for USRNAME
   ${SUDO} service apache2 stop 2>/dev/null
   ${SUDO} update-rc.d apache2 disable 2>/dev/null
   ${SUDO} update-rc.d apache2 remove 2>/dev/null
@@ -1176,6 +1179,8 @@ _copy_keystore() {
     # Create keystore directory if needed
     if [ -d ${CONF_DIR}/keystore ]
     then
+      # Temporarily change permissions
+      ${SUDO} chmod 777 ${CONF_DIR}/keystore
       KEYSTORE_EXIST=`find ${CONF_DIR}/keystore -name "*${KEYSTOREACCT}" -print`
     else
       mkdir -p ${CONF_DIR}/keystore
@@ -1194,15 +1199,8 @@ _copy_keystore() {
       fi
     fi
     
-    # Move temporary key file
+    # Move and rename key file
     mv "${TEMP_KS_FILE}" "${CONF_DIR}/keystore/${KEYSTOREFILE}"
-    chmod 700 ${CONF_DIR}/keystore
-    chmod 600 "${CONF_DIR}/keystore/${KEYSTOREFILE}"
-    # Change ownership if installing as root
-    if [[ ${EUID} = 0 ]]
-    then
-      chown -R "${USRNAME}":"${USRNAME}" "${CONF_DIR}"
-    fi
 
     # Check if file is installed
     ACCTNUM="0x`echo ${KEYSTOREACCT}`"
@@ -1211,6 +1209,14 @@ _copy_keystore() {
       echo "Copy failed; try again."
       REPLY=''
       continue
+    else
+      # Change ownership if installing as root
+      if [[ ${EUID} = 0 ]]
+      then
+        chown -R "${USRNAME}":"${USRNAME}" "${CONF_DIR}"
+      fi
+      chmod 700 ${CONF_DIR}/keystore
+      chmod 600 "${CONF_DIR}/keystore/${KEYSTOREFILE}"
     fi
     
     echo "Keystore Account ${ACCTNUM} copied to:"
@@ -1224,9 +1230,11 @@ _download_bootstrap () {
   
   # Download latest bootstrap and extract it
   echo "Downloading latest bootstrap..."
+  sleep 1
   cd ${USRHOME}
   curl -s ${BOOTSTRAP_URL} | tar xvz
 
+  # Change ownership if downloaded as root
   if [[ ${EUID} = 0 ]]
   then
     chown -R "${USRNAME}":"${USRNAME}" ${USRHOME}/.energicore3
@@ -1239,9 +1247,10 @@ _start_energi () {
   # Start energi
   
   SYSTEMCTLSTATUS=`systemctl status energi.service | grep "Active:" | awk '{print $2}'`
-  if [[ "${SYSTEMCTLSTATUS}" != "Active" ]]
+  if [[ "${SYSTEMCTLSTATUS}" != "active" ]]
   then
     echo "Starting Energi Core Node...."
+    ${SUDO} systemctl daemon-reload
     ${SUDO} systemctl start energi.service
   else
     echo "energi service is running..."
@@ -1269,6 +1278,8 @@ _stop_energi () {
 _get_enode () {
 
   # Print enode of core node
+  
+  # Wait 60 sec or till energi3.ipc socket file is present
   I=1
   while [ ! -S ${CONF_DIR}/energi3.ipc ] || [ ${I} = 60 ]
   do
@@ -1297,8 +1308,11 @@ _get_enode () {
 
 _stop_nodemon () {
   
-  # Check if nodemon is running. If so, stop and remove
-  if [ -f /etc/systemd/system/nodemon.timer ]
+  # Check if nodemon is running. If so, stop it
+  
+  NODEMONSTATUS=`systemctl status nodemon.timer | grep "Active:" | awk '{print $2}'`
+  
+  if [[ "${NODEMONSTATUS}" = "active" ]]
   then
     echo "Stopping nodemon service for Energi"
     ${SUDO} systemctl stop nodemon.timer
@@ -1309,10 +1323,11 @@ _stop_nodemon () {
 
 _start_nodemon () {
   
-  # Check if nodemon is running. If so, stop and remove
+  # If nodemon is installed, start it
   if [ -f /etc/systemd/system/nodemon.timer ]
   then
-    echo "Stopping nodemon service for Energi"
+    echo "Starting nodemon service for Energi"
+    ${SUDO} systemctl daemon-reload
     ${SUDO} systemctl start nodemon.timer
 
   fi
@@ -1584,7 +1599,7 @@ Energi installer arguments:
     -h  --help                : Display this help text
     -d  --debug               : Debug mode
 EOL
-
+        echo
         exit 0
         ;;
     *)
@@ -1640,7 +1655,7 @@ case ${INSTALLTYPE} in
     
     case ${REPLY} in
       a)
-        # New server installation of Energi3
+        # New server installation of Energi
         
         # ==> Run as root / sudo <==
         _install_apt
@@ -1742,7 +1757,7 @@ case ${INSTALLTYPE} in
     
     case ${REPLY} in
       a)
-        # Upgrade version of Energi3
+        # Upgrade version of Energi
         _stop_nodemon
         _stop_energi
         _install_apt
@@ -1781,7 +1796,10 @@ case ${INSTALLTYPE} in
       
       b)
         # Install nodemon
-        echo "See nodemon installation guide for details"        
+        echo
+        echo
+        echo "See nodemon installation guide for details"
+        exit 0
         ;;
         
       x)
