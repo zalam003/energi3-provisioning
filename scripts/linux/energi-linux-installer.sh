@@ -20,7 +20,7 @@
 : '
 # Run the script to get started:
 ```
-bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/zalam003/energi3-provisioning/master/scripts/linux/energi-linux-installer.sh)" ['' arguments; source ~/.bashrc
+bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/zalam003/energi3-provisioning/master/scripts/linux/energi-linux-installer.sh)" ['' arguments]; source ~/.bashrc
 
 Energi installer arguments:
     -b  --bootstrap           : Sync node using Bootstrap
@@ -603,7 +603,7 @@ ExecStartPre=/bin/chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log/energi_std
 ExecStartPre=/bin/chmod 640 ${CONF_DIR}/energi3/log/energi_stdout.log
 StandardOutput=file:${CONF_DIR}/energi3/log/energi_stdout.log
 StandardError=file:${CONF_DIR}/energi3/log/energi_stdout.log
-ExecStart=${BIN_DIR}/energi \
+ExecStart=${BIN_DIR}/${ENERGI_EXE} ${APPARG}\
   --datadir ${CONF_DIR} \
   --gcmode archive \
   --maxpeers 128 \
@@ -1144,15 +1144,8 @@ _copy_keystore() {
     
     KEYSTOREACCT=$( cat "${TEMP_KS_FILE}" | jq -r '.address' )
     KEYSTOREFILE="UTC--`date --utc +%Y-%m-%dT%H-%M-%S.%NZ`--${KEYSTOREACCT}"
-
-    ACCTNUM="0x`echo ${KEYSTOREACCT}`"
-    if [[ -z "${KEYSTOREFILE}" ]]
-    then
-      echo "Copy failed; try again."
-      REPLY=''
-      continue
-    fi
     
+    # Create keystore directory if needed
     if [ -d ${CONF_DIR}/keystore ]
     then
       KEYSTORE_EXIST=`find ${CONF_DIR}/keystore -name "*${KEYSTOREACCT}" -print`
@@ -1161,6 +1154,7 @@ _copy_keystore() {
       KEYSTORE_EXIST=''
     fi
     
+    # Check if a keystore file is already present.
     if [[ ! -z "${KEYSTORE_EXIST}" ]]
     then
       echo "Backing up ${KEYSTORE_EXIST} file"
@@ -1172,13 +1166,23 @@ _copy_keystore() {
       fi
     fi
     
-    #
-    mv "${KEYSTOREFILE}" "${CONF_DIR}/keystore/."
+    # Move temporary key file
+    mv "${TEMP_KS_FILE}" "${CONF_DIR}/keystore/${KEYSTOREFILE}"
     chmod 700 ${CONF_DIR}/keystore
     chmod 600 "${CONF_DIR}/keystore/${KEYSTOREFILE}"
+    # Change ownership if installing as root
     if [[ ${EUID} = 0 ]]
     then
       chown -R "${USRNAME}":"${USRNAME}" "${CONF_DIR}"
+    fi
+
+    # Check if file is installed
+    ACCTNUM="0x`echo ${KEYSTOREACCT}`"
+    if [[ -z "${CONF_DIR}/keystore/${KEYSTOREFILE}" ]]
+    then
+      echo "Copy failed; try again."
+      REPLY=''
+      continue
     fi
     
     echo "Keystore Account ${ACCTNUM} copied to:"
