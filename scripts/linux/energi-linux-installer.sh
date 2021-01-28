@@ -1561,7 +1561,7 @@ ENERGI
 echo "${GREEN}  \:\  /:/  /  ${NC}Please logout and log back in as ${USRNAME}"
 echo "${GREEN}   \:\/:/  /   ${NC}To start energi: sudo systemctl start energi"
 echo "${GREEN}    \::/  /    ${NC}To stop energi : sudo systemctl stop energi"
-echo "${GREEN}     \/__/     ${NC}For status      : sudo systemctl status energi"
+echo "${GREEN}     \/__/     ${NC}For status     : sudo systemctl status energi"
 echo ${NC}"For instructions visit: ${DOC_URL}"
 echo
 }
