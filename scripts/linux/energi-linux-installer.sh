@@ -61,9 +61,26 @@ DOC_URL="https://support.energi.world/"
 export S3URL=${S3URL:-"https://s3-us-west-2.amazonaws.com/download.energi.software/releases/energi3"}
 
 # Set Executables & Configuration
-export ENERGI_EXE=energi
 export ENERGI_CONF=energi.toml
 export ENERGI_IPC=energi3.ipc
+# Check Github for URL of latest version
+if [ -z "${GIT_LATEST}" ]
+then
+  GITHUB_LATEST=$( curl -s ${API_URL} )
+  GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
+  
+  # Extract latest version number without the 'v'
+  GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+fi
+
+# Check if v3.1+ is available on Github
+if _version_gt ${GIT_LATEST} 3.0.99; then
+  export ENERGI_EXE=energi
+  export ENERGIPATH=Energi
+else
+  export ENERGI_EXE=energi3
+  export ENERGIPATH=Energi3
+fi
 
 # Set colors
 BLUE=`tput setaf 4`
@@ -176,7 +193,7 @@ _add_nrgstaker () {
         ${SUDO} apt-get install -yq pwgen
       fi
       
-      USRPASSWD=`pwgen 10 1`
+      USRPASSWD=`pwgen 12 1`
       clear
       echo
       echo "The following username / password is needed for future login."
@@ -218,22 +235,13 @@ SUDO_CONF
   then
       chown ${USRNAME}:${USRNAME} /home/${USRNAME}/.sudo_as_admin_successful
   fi
-  
-  # Add PATH variable for Energi
-  CHKBASHRC=`grep "Energi3 PATH" "${USRHOME}/.bashrc"`
-  if [ ! -z "${CHKBASHRC}" ]
-  then
-    sed -i 's/Energi3/Energi/g' "${USRHOME}/.bashrc"
-    sed -i 's/energi3/energi/g' "${USRHOME}/.bashrc"
-    source ${USRHOME}/.bashrc
-  fi
-  
-  CHKBASHRC=`grep "Energi PATH" "${USRHOME}/.bashrc"`
+ 
+  CHKBASHRC=`grep "${ENERGIPATH} PATH" "${USRHOME}/.bashrc"`
   if [ -z "${CHKBASHRC}" ]
   then
     echo "" >> "${USRHOME}/.bashrc"
     echo "# Energi PATH" >> "${USRHOME}/.bashrc"
-    echo "export PATH=\${PATH}:\${HOME}/energi/bin" >> "${USRHOME}/.bashrc"
+    echo "export PATH=\${PATH}:\${HOME}/${ENERGI_EXE}/bin" >> "${USRHOME}/.bashrc"
     echo
     echo "  .bashrc updated with PATH variable"
     if [[ $EUID != 0 ]]
@@ -295,7 +303,7 @@ _check_install () {
       sleep 0.3
       
       export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
-      export ENERGI_HOME=${USRHOME}/energi
+      export ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
       ;;
   
     *)
@@ -337,7 +345,7 @@ _check_install () {
         INSTALLTYPE=upgrade
         
         export USRHOME=`grep "^${USRNAME}:" /etc/passwd | awk -F: '{print $6}'`
-        export ENERGI_HOME=${USRHOME}/energi
+        export ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
 
       else
         echo "${RED}Invalid entry:${NC} Enter a number less than or equal to ${V3USRCOUNT}"
@@ -365,12 +373,16 @@ _setup_appdir () {
     
     # Extract latest version number without the 'v'
     GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
-  fi
   
-  # Check if v3.1+ is available on Github
-  if ! _version_gt ${GIT_LATEST} 3.0.99; then
-    ENERGI_EXE=energi3
-    ENERGI_HOME=${USRHOME}/energi3
+    # Check if v3.1+ is available on Github
+    if _version_gt ${GIT_LATEST} 3.0.99; then
+      ENERGI_EXE=energi
+      ENERGI_HOME=${USRHOME}/energi    
+    
+    else
+      ENERGI_EXE=energi3
+      ENERGI_HOME=${USRHOME}/energi3
+    fi
   fi
 
   # Setup application directories if does not exist  
@@ -427,12 +439,14 @@ _set_ismainnet () {
       export FWPORT=39797
       export APPARG=''
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
+      export NEXUS_URL="https://nexus.energi.network/"
       echo "Core Node will be setup for Mainnet"
     else
       export CONF_DIR=${USRHOME}/.energicore3/testnet
       export APPARG='--testnet'
       export FWPORT=49797
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/testnet/gen3-chaindata.tar.gz"
+      export NEXUS_URL="https://nexus.test.energi.network/"
       echo "Core Node will be setup for Testnet"
     fi
 
@@ -644,14 +658,17 @@ _install_energi () {
     
     # Extract latest version number without the 'v'
     GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+  
+    # Check if v3.1+ is available on Github
+    if _version_gt ${GIT_LATEST} 3.0.99; then
+      ENERGI_EXE=energi
+      ENERGI_HOME=${USRHOME}/energi
+    else
+      ENERGI_EXE=energi3
+      ENERGI_HOME=${USRHOME}/energi3
+    fi
   fi
   
-  # Check if v3.1+ is available on Github
-  if ! _version_gt ${GIT_LATEST} 3.0.99; then
-    ENERGI_EXE=energi3
-    ENERGI_HOME=${USRHOME}/energi3
-  fi
- 
   # Download from repositogy
   echo "Downloading Energi Core Node and scripts"
   
@@ -709,14 +726,16 @@ _install_energi () {
 
 _upgrade_energi () {
   
-  # Check the latest version in Github 
-  
-  GITHUB_LATEST=$( curl -s ${API_URL} )
-  GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
-  
-  # Extract latest version number without the 'v'
-  GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
-  
+  # Check Github for URL of latest version
+  if [ -z "${GIT_LATEST}" ]
+  then
+    GITHUB_LATEST=$( curl -s ${API_URL} )
+    GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
+    
+    # Extract latest version number without the 'v'
+    GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+  fi
+
   # Rename energi3 if 3.1.x and above is released
   if [[ -d ${USRHOME}/energi3 ]]
   then
@@ -729,6 +748,15 @@ _upgrade_energi () {
       ${SUDO} systemctl disable energi3.service
       ${SUDO} rm /lib/systemd/system/energi3.service
       _add_systemd
+      
+      # Update PATH variable for Energi
+      CHKBASHRC=`grep "Energi3 PATH" "${USRHOME}/.bashrc"`
+      if [ ! -z "${CHKBASHRC}" ]
+      then
+        sed -i 's/Energi3/Energi/g' "${USRHOME}/.bashrc"
+        sed -i 's/energi3/energi/g' "${USRHOME}/.bashrc"
+        source ${USRHOME}/.bashrc
+      fi
       
     else
       ENERGI_EXE=energi3
@@ -1251,17 +1279,17 @@ _get_enode () {
   
   if [[ ${EUID} = 0 ]] && [[ -S ${CONF_DIR}/energi3.ipc ]]
   then
-    echo "${GREEN}To Announce Masternode go to:${NC} https://gen3.energi.network/masternodes/announce"
+    echo "${GREEN}To Announce Masternode go to:${NC} ${NEXUS_URL}"
     echo -n "Owner Address: "
-    su - ${USRNAME} -c "${BIN_DIR}/energi ${APPARG} attach -exec 'personal.listAccounts' " 2>/dev/null | jq -r '.[]' | head -1
+    su - ${USRNAME} -c "${BIN_DIR}/${ENERGI_EXE} ${APPARG} attach -exec 'personal.listAccounts' " 2>/dev/null | jq -r '.[]' | head -1
     echo "Masternode enode URL: "
-    su - ${USRNAME} -c "${BIN_DIR}/energi ${APPARG} attach -exec 'admin.nodeInfo.enode' " 2>/dev/null | jq -r
+    su - ${USRNAME} -c "${BIN_DIR}/${ENERGI_EXE} ${APPARG} attach -exec 'admin.nodeInfo.enode' " 2>/dev/null | jq -r
   else
-    echo "${GREEN}To Announce Masternode go to:${NC} https://gen3.energi.network/masternodes/announce"
+    echo "${GREEN}To Announce Masternode go to:${NC} ${NEXUS_URL}"
     echo -n "Owner Address: "
-    energi ${APPARG} attach -exec "personal.listAccounts" 2>/dev/null | jq -r | head -1
+    ${ENERGI_EXE} ${APPARG} attach -exec "personal.listAccounts" 2>/dev/null | jq -r | head -1
     echo "Masternode enode URL: "
-    energi ${APPARG} attach -exec "admin.nodeInfo.enode" 2>/dev/null | jq -r
+    ${ENERGI_EXE} ${APPARG} attach -exec "admin.nodeInfo.enode" 2>/dev/null | jq -r
   fi
   echo
 
@@ -1715,6 +1743,7 @@ case ${INSTALLTYPE} in
     case ${REPLY} in
       a)
         # Upgrade version of Energi3
+        _stop_nodemon
         _stop_energi
         _install_apt
         _restrict_logins
@@ -1736,16 +1765,17 @@ case ${INSTALLTYPE} in
               _download_bootstrap
               break
               
-            elif [[ -f "${CONF_DIR}/energi/chaindata/CURRENT" ]] && [[ ${BOOTSTRAP} = y ]]
+            elif [[ -f "${CONF_DIR}/energi3/chaindata/CURRENT" ]] && [[ ${BOOTSTRAP} = y ]]
             then
               echo "Removing chaindata..."
-              rm -rf ${CONF_DIR}/energi/chaindata/*
+              rm -rf ${CONF_DIR}/energi3/chaindata/*
               _download_bootstrap
             fi
           done
         fi
         
         _start_energi
+        _start_nodemon
  
         ;;
       
