@@ -20,7 +20,17 @@
 : '
 # Run the script to get started:
 ```
-curl -s https://raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/energi-linux-installer.sh | bash -s arg1 arg2
+bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/zalam003/energi3-provisioning/master/scripts/linux/energi-linux-installer.sh)" ['' arguments; source ~/.bashrc
+
+Energi installer arguments:
+    -b  --bootstrap           : Sync node using Bootstrap
+    -n  --no-interaction      : No interaction mode
+    -t  --testnet             : Setup testnet
+    -r  --rsa                 : Setup token based login
+    -f  --2fa                 : Setup 2-Factor Authentication
+    -rf --rm2fa               : Remove 2-Factor Authentication
+    -h  --help                : Display this help text
+    -d  --debug               : Debug mode
 ```
 '
 ######################################################################
@@ -141,6 +151,13 @@ _check_runas () {
       exit 0
     fi
   fi
+}
+
+_version_gt() { 
+
+  # Check if FIRST version is greater than SECOND version
+  test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; 
+  
 }
 
 _add_nrgstaker () {
@@ -340,8 +357,23 @@ _check_install () {
 
 _setup_appdir () {
 
-  # Setup application directories if does not exist
+  # Check Github for URL of latest version
+  if [ -z "${GIT_LATEST}" ]
+  then
+    GITHUB_LATEST=$( curl -s ${API_URL} )
+    GIT_VERSION=$( echo "${GITHUB_LATEST}" | jq -r '.tag_name' )
+    
+    # Extract latest version number without the 'v'
+    GIT_LATEST=$( echo ${GIT_VERSION} | sed 's/v//g' )
+  fi
   
+  # Check if v3.1+ is available on Github
+  if ! _version_gt ${GIT_LATEST} 3.0.99; then
+    ENERGI_EXE=energi3
+    ENERGI_HOME=${USRHOME}/energi3
+  fi
+
+  # Setup application directories if does not exist  
   echo "Energi will be installed in ${ENERGI_HOME}"
   sleep 0.5
   # Set application directories
@@ -400,7 +432,7 @@ _set_ismainnet () {
       export CONF_DIR=${USRHOME}/.energicore3/testnet
       export APPARG='--testnet'
       export FWPORT=49797
-      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
+      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/testnet/gen3-chaindata.tar.gz"
       echo "Core Node will be setup for Testnet"
     fi
 
@@ -597,13 +629,6 @@ SYSTEMD_CONF
   fi
 }
 
-_version_gt() { 
-
-  # Check if FIRST version is greater than SECOND version
-  test "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1"; 
-  
-}
-
 _install_energi () {
 
   # Download and install node software and supporting scripts
@@ -622,7 +647,7 @@ _install_energi () {
   fi
   
   # Check if v3.1+ is available on Github
-  if _version_gt 3.0.99 ${GIT_LATEST}; then
+  if ! _version_gt ${GIT_LATEST} 3.0.99; then
     ENERGI_EXE=energi3
     ENERGI_HOME=${USRHOME}/energi3
   fi
@@ -1133,11 +1158,6 @@ _copy_keystore() {
       KEYSTORE_EXIST=`find ${CONF_DIR}/keystore -name "*${KEYSTOREACCT}" -print`
     else
       mkdir -p ${CONF_DIR}/keystore
-      chmod 700 ${CONF_DIR}/keystore
-      if [[ ${EUID} = 0 ]]
-      then
-        chown -R "${USRNAME}":"${USRNAME}" "${CONF_DIR}"
-      fi
       KEYSTORE_EXIST=''
     fi
     
@@ -1153,11 +1173,12 @@ _copy_keystore() {
     fi
     
     #
-    mv "${KEYSTOREFILE}" "${CONF_DIR}/keystore/."   
+    mv "${KEYSTOREFILE}" "${CONF_DIR}/keystore/."
+    chmod 700 ${CONF_DIR}/keystore
     chmod 600 "${CONF_DIR}/keystore/${KEYSTOREFILE}"
     if [[ ${EUID} = 0 ]]
     then
-      chown "${USRNAME}":"${USRNAME}" "${CONF_DIR}/keystore/${KEYSTOREFILE}"
+      chown -R "${USRNAME}":"${USRNAME}" "${CONF_DIR}"
     fi
     
     echo "Keystore Account ${ACCTNUM} copied to:"
@@ -1530,9 +1551,9 @@ Energi installer arguments:
     -rf --rm2fa               : Remove 2-Factor Authentication
     -h  --help                : Display this help text
     -d  --debug               : Debug mode
-
 EOL
-        exit
+
+        exit 0
         ;;
     *)
         $0 -h
