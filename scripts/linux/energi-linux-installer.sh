@@ -16,7 +16,7 @@
 #   1.3.0  20200521  ZA migrate to energi binary name; merge RPi
 #   1.3.1  20210120  ZA update keystore download
 #   1.3.2  20210121  ZA update to set API_URL externally
-#   1.3.3  20200128  ZA bug fix and enhancements; supports both v3.0.x and v3.1+
+#   1.3.3  20200129  ZA bug fix and enhancements; supports both v3.0.x and v3.1+
 #
 : '
 # Run the script to get started:
@@ -718,7 +718,10 @@ _install_energi () {
   fi
   
   # Clean-up
-  rm -rf ${ENERGI_HOME}.old
+  if [[ -d ${ENERGI_HOME}.old ]]
+  then
+    rm -rf ${ENERGI_HOME}.old
+  fi
   
   # Change to install directory
   cd
@@ -736,11 +739,13 @@ _upgrade_energi () {
     # Extract latest version number without the 'v'
     GIT_VERSION_NUM=$( echo ${GIT_VERSION} | sed 's/v//g' )
   fi
+  
+  # Check if v3.1+ is available on Github
+  if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
 
-  # Rename energi3 if 3.1.x and above is released
-  if [[ -d ${USRHOME}/energi3 ]]
-  then
-    if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
+    # Rename energi3 if 3.1.x and above is released
+    if [[ -d ${USRHOME}/energi3 ]]
+    then
       mv ${USRHOME}/energi3/bin/energi3 ${USRHOME}/energi3/bin/energi
       mv ${USRHOME}/energi3 ${USRHOME}/energi
       ${SUDO} rm /etc/logrotate.d/energi3
@@ -759,21 +764,42 @@ _upgrade_energi () {
         source ${USRHOME}/.bashrc
       fi
       
-      CHKSYSD=`grep "energi 3" /lib/systemd/system/energi.service`
+      # If v3.0.x was used; catch all
+      CHKSYSD=`grep "energi3 " /lib/systemd/system/energi.service`
+      if [ ! -z "${CHKSYSD}" ]
+      then
+        ${SUDO} sed -i 's/energi3 /energi /g' /lib/systemd/system/energi.service
+      fi
       
-    else
-      ENERGI_EXE=energi3
-      ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
+      export ENERGI_EXE=energi
+      export ENERGI_HOME="${USRHOME}/${ENERGI_EXE}"
+    
     fi
-  fi
+    
+  else
+    ENERGI_EXE=energi3
+    ENERGI_HOME=${USRHOME}/${ENERGI_EXE}
+    
+  fi 
   
   # Set PATH to energi
   export BIN_DIR=${ENERGI_HOME}/bin
   
   # Installed Version
   INSTALL_VERSION=$( ${BIN_DIR}/${ENERGI_EXE} version 2>/dev/null | grep "^Version" | awk '{ print $2 }' | awk -F\- '{ print $1 }' )
+  if [[ -z ${INSTALL_VERSION} ]]
+  then
   
-  if _version_gt ${GIT_VERSION_NUM} ${INSTALL_VERSION}; then
+    # Cannot determine install version
+    echo "${RED}Cannot determine the version installed on the VPS."
+    echo "${RED}Exiting installer.${NC}"
+    exit 10
+  
+  fi
+  
+  # Check if the version in Github requires removedb
+  if _version_gt ${GIT_VERSION_NUM} ${INSTALL_VERSION}
+  then
     echo "Installing newer version ${GIT_VERSION} from Github"
     if [[ -f "${CONF_DIR}/removedb-list.db" ]]
     then
@@ -789,22 +815,6 @@ _upgrade_energi () {
     fi
     
     _install_energi
-    
-    # Update PATH variable for Energi
-    CHKBASHRC=`grep "Energi3 PATH" "${USRHOME}/.bashrc"`
-    if [ ! -z "${CHKBASHRC}" ]
-    then
-      sed -i 's/Energi3/Energi/g' "${USRHOME}/.bashrc"
-      sed -i 's/energi3/energi/g' "${USRHOME}/.bashrc"
-      source ${USRHOME}/.bashrc
-    fi
-    
-    # If v3.0.x was used; catch all
-    CHKSYSD=`grep "energi3 " /lib/systemd/system/energi.service`
-    if [ ! -z "${CHKSYSD}" ]
-    then
-      ${SUDO} sed -i 's/energi3 /energi /g' /lib/systemd/system/energi.service
-    fi
     
   else
     echo "Latest version of Energi is installed: ${INSTALL_VERSION}"
@@ -1139,6 +1149,7 @@ _add_rsa_key() {
       if [[ ${EUID} = 0 ]]
       then
         chown -R ${USRNAME}:${USRNAME} "${USRHOME}/.ssh"
+        chmod 700 "${USRHOME}/.ssh"
       fi
       echo "Added ${SSH_TEST}"
       echo
@@ -1267,14 +1278,29 @@ _start_energi () {
 
   # Start energi
   
-  SYSTEMCTLSTATUS=`systemctl status energi.service | grep "Active:" | awk '{print $2}'`
-  if [[ "${SYSTEMCTLSTATUS}" != "active" ]]
+  if [[ -f /lib/systemd/system/energi.service ]]
   then
-    echo "Starting Energi Core Node...."
-    ${SUDO} systemctl daemon-reload
-    ${SUDO} systemctl start energi.service
-  else
-    echo "energi service is running..."
+    SYSTEMCTLSTATUS=`systemctl status energi.service | grep "Active:" | awk '{print $2}'`
+    if [[ "${SYSTEMCTLSTATUS}" != "active" ]]
+    then
+      echo "Starting Energi Core Node...."
+      ${SUDO} systemctl daemon-reload
+      ${SUDO} systemctl start energi.service
+    else
+      echo "energi service is running..."
+    fi
+    
+  elif [[ -f /lib/systemd/system/energi3.service ]]
+  then
+    SYSTEMCTLSTATUS=`systemctl status energi3.service | grep "Active:" | awk '{print $2}'`
+    if [[ "${SYSTEMCTLSTATUS}" != "active" ]]
+    then
+      echo "Starting Energi Core Node...."
+      ${SUDO} systemctl daemon-reload
+      ${SUDO} systemctl start energi3.service
+    else
+      echo "energi service is running..."
+    fi  
   fi
 
 }
@@ -1282,18 +1308,34 @@ _start_energi () {
 _stop_energi () {
 
   # Check if energi process is running and stop it
-  
-  SYSTEMCTLSTATUS=`systemctl status energi.service | grep "Active:" | awk '{print $2}'`
-  
-  if [[ "${SYSTEMCTLSTATUS}" = "active" ]]
-  then
-    echo "Stopping Energi Core Node..."
-    ${SUDO} systemctl stop energi.service
-    sleep 1
-  else
-    echo "energi service is not running..."
+
+  if [[ -f /lib/systemd/system/energi.service ]]
+  then  
+    
+    SYSTEMCTLSTATUS=`systemctl status energi.service | grep "Active:" | awk '{print $2}'`
+    if [[ "${SYSTEMCTLSTATUS}" = "active" ]]
+    then
+      echo "Stopping Energi Core Node..."
+      ${SUDO} systemctl stop energi.service
+      sleep 1
+    else
+      echo "energi service is not running..."
+    fi
+    
+  elif [[ -f /lib/systemd/system/energi3.service ]]
+  then  
+    
+    SYSTEMCTLSTATUS=`systemctl status energi3.service | grep "Active:" | awk '{print $2}'`
+    if [[ "${SYSTEMCTLSTATUS}" = "active" ]]
+    then
+      echo "Stopping Energi3 Core Node..."
+      ${SUDO} systemctl stop energi3.service
+      sleep 1
+    else
+      echo "energi3 service is not running..."
+    fi
   fi
-  
+
 }
 
 _get_enode () {
@@ -1316,13 +1358,17 @@ _get_enode () {
     su - ${USRNAME} -c "${BIN_DIR}/${ENERGI_EXE} ${APPARG} attach -exec 'personal.listAccounts' " 2>/dev/null | jq -r '.[]' | head -1
     echo "Masternode enode URL: "
     su - ${USRNAME} -c "${BIN_DIR}/${ENERGI_EXE} ${APPARG} attach -exec 'admin.nodeInfo.enode' " 2>/dev/null | jq -r
+  
   else
     echo "${GREEN}To Announce Masternode go to:${NC} ${NEXUS_URL}"
     echo -n "Owner Address: "
     ${ENERGI_EXE} ${APPARG} attach -exec "personal.listAccounts" 2>/dev/null | jq -r | head -1
     echo "Masternode enode URL: "
     ${ENERGI_EXE} ${APPARG} attach -exec "admin.nodeInfo.enode" 2>/dev/null | jq -r
+  
   fi
+  
+  # Add space
   echo
 
 }
