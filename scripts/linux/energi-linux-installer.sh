@@ -17,6 +17,7 @@
 #   1.3.1  20210120  ZA update keystore download
 #   1.3.2  20210121  ZA update to set API_URL externally
 #   1.3.3  20200129  ZA bug fix and enhancements; supports both v3.0.x and v3.1+
+#   1.3.4  20200201  ZA systemd service filename for v3.0.x updated
 #
 : '
 # Run the script to get started:
@@ -598,18 +599,18 @@ _add_systemd () {
 
   # Setup systemd for autostart
 
-  if [ ! -f /lib/systemd/system/energi.service ]
+  if [ ! -f /lib/systemd/system/${ENERGI_EXE}.service ]
   then
     echo "Setting up systemctl to automatically start energi after reboot..."
     sleep 0.3
     EXTIP=`curl -s https://ifconfig.me/`
-    cat << SYSTEMD_CONF | ${SUDO} tee /lib/systemd/system/energi.service >/dev/null
+    cat << SYSTEMD_CONF | ${SUDO} tee /lib/systemd/system/${ENERGI_EXE}.service >/dev/null
 [Unit]
 Description=Energi Core Node Service
 After=syslog.target network.target
 
 [Service]
-SyslogIdentifier=energi
+SyslogIdentifier=${ENERGI_EXE}
 PermissionsStartOnly=true
 Type=simple
 Restart=always
