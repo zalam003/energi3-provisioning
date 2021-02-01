@@ -1363,7 +1363,7 @@ _get_enode () {
   else
     echo "${GREEN}To Announce Masternode go to:${NC} ${NEXUS_URL}"
     echo -n "Owner Address: "
-    ${ENERGI_EXE} ${APPARG} attach -exec "personal.listAccounts" 2>/dev/null | jq -r | head -1
+    ${ENERGI_EXE} ${APPARG} attach -exec "personal.listAccounts" 2>/dev/null | jq -r '.[]' | head -1
     echo "Masternode enode URL: "
     ${ENERGI_EXE} ${APPARG} attach -exec "admin.nodeInfo.enode" 2>/dev/null | jq -r
   
