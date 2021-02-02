@@ -1633,6 +1633,24 @@ do
   case $key in
     -b|--bootstrap)
         BOOTSTRAP="y"
+        if [[ EUID = 0 ]]
+        then
+          echo "Cannot run --bootstrap as root.  Exiting script."
+          echo
+          exit 10
+        fi
+        _stop_nodemon
+        sleep 0.3
+        _stop_energi
+        sleep 0.3
+        energi removedb
+        sleep 0.3
+        _download_bootstrap
+        sleep 0.3
+        _start_energi
+        sleep 0.3
+        _start_nodemon
+        exit 0
         ;;
     -n|--no-interaction)
         INTERACTIVE="n"
