@@ -17,7 +17,7 @@
 #   1.3.1  20210120  ZA update keystore download
 #   1.3.2  20210121  ZA update to set API_URL externally
 #   1.3.3  20200129  ZA bug fix and enhancements; supports both v3.0.x and v3.1+
-#   1.3.4  20200201  ZA systemd service filename for v3.0.x updated
+#   1.3.4  20200202  ZA systemd service filename for v3.0.x updated
 #
 : '
 # Run the script to get started:
@@ -295,8 +295,8 @@ _check_install () {
       
     1)
       
-      # Upgrade existing version of Energi 3:
-      #   * One instance of Energi3 is already installed
+      # Upgrade existing version of Energi:
+      #   * One instance of Energi is already installed
       #   * nodekey file exists
       #   * Version on computer is older than version in Github
       
@@ -690,7 +690,7 @@ _install_energi () {
   sleep 0.3
   
   # Copy latest energi and cleanup
-  if [[ -x "${ENERGI_EXE}" ]]
+  if [[ -x "${BIN_DIR}/${ENERGI_EXE}" ]]
   then
     mv ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}/bin/${ENERGI_EXE} ${BIN_DIR}/.
     rm -rf ${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}
@@ -910,7 +910,7 @@ _secure_host() {
     ${SUDO} apt-get install -yq ufw 2:/dev/null
   fi
   
-  echo "Limiting secure shell (ssh) to access servers and RPC port ${FWPORT} to access Energi3 Node"
+  echo "Limiting secure shell (ssh) to access servers and RPC port ${FWPORT} to access Energi Node"
   ${SUDO} ufw allow ssh/tcp
   ${SUDO} ufw limit ssh/tcp
   if [ ! -z "${FWPORT}" ]
@@ -1548,7 +1548,7 @@ _menu_option_new () {
  \:\ \/ /:/  /
 ENERGI
 echo "${GREEN}  \:\  /:/  /  ${NC}Options:"
-echo "${GREEN}   \:\/:/  /   ${NC}   a) New server installation of Energi3"
+echo "${GREEN}   \:\/:/  /   ${NC}   a) New server installation of Energi"
 echo "${GREEN}    \::/  /    ${NC}"
 echo "${GREEN}     \/__/     ${NC}   x) Exit without doing anything"
 echo ${NC}
@@ -1567,7 +1567,7 @@ _menu_option_upgrade () {
  \:\ \/ /:/  /
 ENERGI
 echo "${GREEN}  \:\  /:/  /  ${NC}Options:"
-echo "${GREEN}   \:\/:/  /   ${NC}   a) Upgrade version of Energi3"
+echo "${GREEN}   \:\/:/  /   ${NC}   a) Upgrade version of Energi"
 echo "${GREEN}    \::/  /    ${NC}"
 echo "${GREEN}     \/__/     ${NC}   x) Exit without doing anything"
 echo ${NC}
@@ -1585,7 +1585,7 @@ _welcome_instructions () {
  /:/ /:/ /\__\ |______|_| \_|______|_|  \_\\_____|_____|
  \:\ \/ /:/  /
 ENERGI
-echo "${GREEN}  \:\  /:/  /  ${NC}Welcome to the Energi3 Installer."
+echo "${GREEN}  \:\  /:/  /  ${NC}Welcome to the Energi Installer."
 echo "${GREEN}   \:\/:/  /   ${NC}- New Install : No previous installs"
 echo "${GREEN}    \::/  /    ${NC}- Upgrade     : Upgrade previous version"
 echo "${GREEN}     \/__/ "
@@ -1678,7 +1678,7 @@ done
 
 
 #
-# Clears screen and present Energi3 logo
+# Clears screen and present Energi logo
 _ascii_logo_bottom
 sleep 0.2
 _ascii_logo_2
