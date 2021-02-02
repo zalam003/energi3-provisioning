@@ -1639,6 +1639,8 @@ do
           echo
           exit 10
         fi
+        _check_install
+        _set_ismainnet
         _stop_nodemon
         sleep 0.3
         _stop_energi
@@ -1659,14 +1661,17 @@ do
         isMainnet="n"
         ;;
     -r|--rsa)
+        _check_install
         _add_rsa_key
         exit 0
         ;;
     -f|--2fa)
+        _check_install
         _setup_two_factor
         exit 0
         ;;
     -rf|--rm2fa)
+        _check_install
         _remove_two_factor
         exit 0
         ;;
