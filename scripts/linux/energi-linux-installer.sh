@@ -573,12 +573,15 @@ _add_logrotate () {
   if [ ! -f /etc/logrotate.d/${ENERGI_EXE} ]
   then
     echo "Setting up log maintenance for energi"
-    mkdir ${CONF_DIR}/energi3/log
-    if [[ ${EUID} = 0 ]]
+    if [[ ! -d ${CONF_DIR}/energi3/log ]]
     then
-      chown -R ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
+      mkdir ${CONF_DIR}/energi3/log
+      if [[ ${EUID} = 0 ]]
+      then
+        chown -R ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
+      fi
+      sleep 0.3
     fi
-    sleep 0.3
     cat << ENERGI_LOGROTATE | ${SUDO} tee /etc/logrotate.d/${ENERGI_EXE} >/dev/null
 ${CONF_DIR}/energi3/log/*.log {
   su ${USRNAME} ${USRNAME}
@@ -618,7 +621,6 @@ RestartSec=5
 User=${USRNAME}
 Group=${USRNAME}
 UMask=0027
-ExecStartPre=/bin/mkdir -p ${CONF_DIR}/energi3/log
 ExecStartPre=/bin/chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
 ExecStartPre=/bin/chmod 750 ${CONF_DIR}/energi3/log
 ExecStartPre=/bin/touch ${CONF_DIR}/energi3/log/energi_stdout.log
@@ -679,7 +681,7 @@ _install_energi () {
   fi
   
   # Download from repositogy
-  echo "Downloading Energi Core Node and scripts"
+  echo "Downloading Energi Core Node v${GIT_VERSION_NUM} and scripts"
   
   cd ${USRHOME}
   # Download energi from Amazon S3
@@ -757,14 +759,12 @@ _upgrade_energi () {
       then
         ${SUDO} rm /etc/logrotate.d/energi3
       fi
-      _add_logrotate
       
       if [[ -f /lib/systemd/system/energi3.service ]]
       then
         ${SUDO} systemctl disable energi3.service
         ${SUDO} rm /lib/systemd/system/energi3.service
       fi
-      _add_systemd
       
       # Update PATH variable for Energi
       CHKBASHRC=`grep "Energi3 PATH" "${USRHOME}/.bashrc"`
@@ -774,14 +774,6 @@ _upgrade_energi () {
         sed -i 's/energi3/energi/g' "${USRHOME}/.bashrc"
         source ${USRHOME}/.bashrc
       fi
-      
-      # If v3.0.x was used; catch all
-      CHKSYSD=`grep "energi3 " /lib/systemd/system/energi.service`
-      if [ ! -z "${CHKSYSD}" ]
-      then
-        ${SUDO} sed -i 's/energi3 /energi /g' /lib/systemd/system/energi.service
-      fi
-    
     fi
     
   else
@@ -1293,6 +1285,7 @@ _start_energi () {
     then
       echo "Starting Energi Core Node...."
       ${SUDO} systemctl daemon-reload
+      sleep 0.3
       ${SUDO} systemctl start energi.service
     else
       echo "energi service is running..."
@@ -1305,6 +1298,7 @@ _start_energi () {
     then
       echo "Starting Energi Core Node...."
       ${SUDO} systemctl daemon-reload
+      sleep 0.3
       ${SUDO} systemctl start energi3.service
     else
       echo "energi service is running..."
@@ -1847,8 +1841,8 @@ case ${INSTALLTYPE} in
         _secure_host
         _check_clock
         _add_swap
-        _upgrade_energi
         _add_logrotate
+        _upgrade_energi
         
         if [[ -f ${CONF_DIR}/removedb-list.db ]]
         then
@@ -1870,6 +1864,7 @@ case ${INSTALLTYPE} in
           done
         fi
         
+        _add_systemd
         _start_energi
         _start_nodemon
  
