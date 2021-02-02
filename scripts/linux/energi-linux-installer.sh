@@ -287,7 +287,7 @@ _check_install () {
       echo
 
       # Set username
-      USRNAME=nrgstaker
+      export USRNAME=nrgstaker
       INSTALLTYPE=new
       
       _add_nrgstaker
@@ -682,7 +682,7 @@ _install_energi () {
   echo "Downloading Energi Core Node and scripts"
   
   cd ${USRHOME}
-  # Pull energi from Amazon S3
+  # Download energi from Amazon S3
   wget -4qo- "${S3URL}/${GIT_VERSION_NUM}/${ENERGI_EXE}-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz" --show-progress --progress=bar:force:noscroll 2>&1
   sleep 0.3
   
@@ -702,7 +702,7 @@ _install_energi () {
   # Check if software downloaded
   if [ ! -d ${BIN_DIR} ]
   then
-    echo "${RED}ERROR: energi-${GIT_VERSION_NUM}-linux-${OSARCH}.tgz did not download${NC}"
+    echo "${RED}ERROR: ${ENERGI_EXE} did not install${NC}"
     sleep 5
   fi
   
@@ -747,6 +747,10 @@ _upgrade_energi () {
     # Rename energi3 if 3.1.x and above is released
     if [[ -d ${USRHOME}/energi3 ]]
     then
+            
+      export ENERGI_EXE=energi
+      export ENERGI_HOME="${USRHOME}/${ENERGI_EXE}"
+      
       mv ${USRHOME}/energi3/bin/energi3 ${USRHOME}/energi3/bin/energi
       mv ${USRHOME}/energi3 ${USRHOME}/energi
       if [[ -f /etc/logrotate.d/energi3 ]]
@@ -777,9 +781,6 @@ _upgrade_energi () {
       then
         ${SUDO} sed -i 's/energi3 /energi /g' /lib/systemd/system/energi.service
       fi
-      
-      export ENERGI_EXE=energi
-      export ENERGI_HOME="${USRHOME}/${ENERGI_EXE}"
     
     fi
     
@@ -1268,7 +1269,7 @@ _download_bootstrap () {
   
   # Download latest bootstrap and extract it
   echo "Downloading latest bootstrap..."
-  sleep 3
+  sleep 5
   cd ${USRHOME}
   curl -s ${BOOTSTRAP_URL} | tar xvz
 
