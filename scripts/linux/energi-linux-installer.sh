@@ -570,7 +570,7 @@ _add_logrotate () {
 
   # Setup log rotate
   # Logs in $HOME/.energicore3 will rotate automatically when it reaches 100M
-  if [ ! -f /etc/logrotate.d/energi ]
+  if [ ! -f /etc/logrotate.d/${ENERGI_EXE} ]
   then
     echo "Setting up log maintenance for energi"
     mkdir ${CONF_DIR}/energi3/log
@@ -579,7 +579,7 @@ _add_logrotate () {
       chown -R ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
     fi
     sleep 0.3
-    cat << ENERGI_LOGROTATE | ${SUDO} tee /etc/logrotate.d/energi >/dev/null
+    cat << ENERGI_LOGROTATE | ${SUDO} tee /etc/logrotate.d/${ENERGI_EXE} >/dev/null
 ${CONF_DIR}/energi3/log/*.log {
   su ${USRNAME} ${USRNAME}
   rotate 3
@@ -590,7 +590,7 @@ ${CONF_DIR}/energi3/log/*.log {
 }
 ENERGI_LOGROTATE
 
-  logrotate -f /etc/logrotate.d/energi
+  logrotate -f /etc/logrotate.d/${ENERGI_EXE}
   
   fi
 }
@@ -749,11 +749,17 @@ _upgrade_energi () {
     then
       mv ${USRHOME}/energi3/bin/energi3 ${USRHOME}/energi3/bin/energi
       mv ${USRHOME}/energi3 ${USRHOME}/energi
-      ${SUDO} rm /etc/logrotate.d/energi3
+      if [[ -f /etc/logrotate.d/energi3 ]]
+      then
+        ${SUDO} rm /etc/logrotate.d/energi3
+      fi
       _add_logrotate
       
-      ${SUDO} systemctl disable energi3.service
-      ${SUDO} rm /lib/systemd/system/energi3.service
+      if [[ -f /lib/systemd/system/energi3.service ]]
+      then
+        ${SUDO} systemctl disable energi3.service
+        ${SUDO} rm /lib/systemd/system/energi3.service
+      fi
       _add_systemd
       
       # Update PATH variable for Energi
@@ -1743,7 +1749,7 @@ case ${INSTALLTYPE} in
         echo
         
         REPLY=''
-        read -p "Do you want to install 2-Factor Authentication [Y/n]?: " -r
+        read -p "Do you want to install 2-FA for user ${USRNAME} [Y/n]?: " -r
         REPLY=${REPLY,,} # tolower
         if [[ "${REPLY}" == 'y' ]] || [[ -z "${REPLY}" ]]
         then
@@ -1753,6 +1759,12 @@ case ${INSTALLTYPE} in
         _install_energi
         _download_bootstrap
         
+        # Check if user wants to copy keystore file to VPS
+        clear 2> /dev/null
+        echo "You can copy the keystore file of the account to the VPS" 
+        echo "by copy and pasting the content of the keystore file."
+        echo "Locate the keystore file and open it with a text editor."
+        echo 
         REPLY=''
         read -p "Do you want to copy the keystore file to the VPS (y/[n])?: " -r
         REPLY=${REPLY,,} # tolower
