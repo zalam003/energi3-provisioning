@@ -447,20 +447,22 @@ _set_ismainnet () {
 
   elif [[ "${INSTALLTYPE}" == "upgrade" ]]
   then
-    if [ ! -d "${USRNAME}/.energicore3/testnet" ]
+    if [ -d "${USRNAME}/.energicore3/testnet" ]
     then
-      export CONF_DIR=${USRHOME}/.energicore3
-      export FWPORT=39797
-      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
-      export NEXUS_URL="https://nexus.energi.network/"
-      echo "Core Node will be setup for Mainnet"
-    else
       export CONF_DIR=${USRHOME}/.energicore3/testnet
       export FWPORT=49797
       export APPARG='--testnet'
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/testnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.test.energi.network/"
       echo "Core Node will be setup for Testnet"
+      
+    else
+      export CONF_DIR=${USRHOME}/.energicore3
+      export FWPORT=39797
+      export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
+      export NEXUS_URL="https://nexus.energi.network/"
+      echo "Core Node will be setup for Mainnet"
+      
     fi
 
   fi
@@ -1638,9 +1640,10 @@ do
   case $key in
     -b|--bootstrap)
         BOOTSTRAP="y"
+        clear 2> /dev/null
         if [[ EUID = 0 ]]
         then
-          echo "Cannot run --bootstrap as root.  Exiting script."
+          echo "Cannot run as root.  Exiting script."
           echo
           exit 10
         fi
@@ -1666,16 +1669,37 @@ do
         isMainnet="n"
         ;;
     -r|--rsa)
+        clear 2> /dev/null
+        if [[ EUID = 0 ]]
+        then
+          echo "Cannot run as root.  Exiting script."
+          echo
+          exit 10
+        fi
         _check_install
         _add_rsa_key
         exit 0
         ;;
     -f|--2fa)
+        clear 2> /dev/null
+        if [[ EUID = 0 ]]
+        then
+          echo "Cannot run as root.  Exiting script."
+          echo
+          exit 10
+        fi
         _check_install
         _setup_two_factor
         exit 0
         ;;
     -rf|--rm2fa)
+        clear 2> /dev/null
+        if [[ EUID = 0 ]]
+        then
+          echo "Cannot run as root.  Exiting script."
+          echo
+          exit 10
+        fi
         _check_install
         _remove_two_factor
         exit 0
@@ -1684,7 +1708,9 @@ do
         set -x
         ;;
     -h|--help)
-        cat << EOL
+        echo
+        clear 2> /dev/null
+        cat << HELPMSG
 
 Energi installer arguments:
     -b  --bootstrap           : Sync node using Bootstrap
@@ -1695,9 +1721,11 @@ Energi installer arguments:
     -rf --rm2fa               : Remove 2-Factor Authentication
     -h  --help                : Display this help text
     -d  --debug               : Debug mode
-EOL
+HELPMSG
         echo
+        
         exit 0
+        
         ;;
     *)
         $0 -h
