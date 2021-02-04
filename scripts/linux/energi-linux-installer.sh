@@ -930,6 +930,11 @@ _setup_two_factor() {
   ${SUDO} service apache2 stop 2>/dev/null
   ${SUDO} update-rc.d apache2 disable 2>/dev/null
   ${SUDO} update-rc.d apache2 remove 2>/dev/null
+  
+  if [[ -z ${ETC_DIR} ]]
+  then
+    export ETC_DIR=${ENERGI_HOME}/etc
+  fi
 
   # Ask to review if .google_authenticator file already exists.
   if [[ -s "${USRHOME}/.google_authenticator" ]]
