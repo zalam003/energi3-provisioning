@@ -424,7 +424,7 @@ _setup_appdir () {
 _set_ismainnet () {
 
   # Default: Mainnet
-  # If -t or --testnet argument is passed, isMainnet=n$
+  # If -t or --testnet argument is passed, isMainnet=n
   
   if [[ "${INSTALLTYPE}" == "new" ]]
   then
@@ -440,6 +440,7 @@ _set_ismainnet () {
       export CONF_DIR=${USRHOME}/.energicore3/testnet
       export FWPORT=49797
       export APPARG='--testnet'
+      export isMainnet="n"
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/testnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.test.energi.network/"
       echo "Core Node will be setup for Testnet"
@@ -447,11 +448,12 @@ _set_ismainnet () {
 
   elif [[ "${INSTALLTYPE}" == "upgrade" ]]
   then
-    if [ -d "${USRNAME}/.energicore3/testnet" ]
+    if [[ -d "${USRNAME}/.energicore3/testnet" ]]
     then
       export CONF_DIR=${USRHOME}/.energicore3/testnet
       export FWPORT=49797
       export APPARG='--testnet'
+      export isMainnet="n"
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/testnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.test.energi.network/"
       echo "Core Node will be setup for Testnet"
@@ -1632,6 +1634,7 @@ else
   export ENERGIPATH=Energi3
 fi
 
+# Check script arguments
 while [[ $# -gt 0 ]]
 do
   key="$1"
@@ -1639,7 +1642,6 @@ do
 
   case $key in
     -b|--bootstrap)
-        BOOTSTRAP="y"
         clear 2> /dev/null
         if [[ EUID = 0 ]]
         then
@@ -1653,7 +1655,7 @@ do
         sleep 0.3
         _stop_energi
         sleep 0.3
-        energi removedb
+        ${ENERGI_EXE} removedb
         sleep 0.3
         _download_bootstrap
         sleep 0.3
