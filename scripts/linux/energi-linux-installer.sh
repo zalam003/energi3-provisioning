@@ -435,7 +435,7 @@ _set_ismainnet () {
       export APPARG=''
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.energi.network/"
-      echo "Core Node will be setup for Mainnet"
+      echo "Core Node will be setup for Mainnet 1"
     else
       export CONF_DIR=${USRHOME}/.energicore3/testnet
       export FWPORT=49797
@@ -463,7 +463,7 @@ _set_ismainnet () {
       export FWPORT=39797
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.energi.network/"
-      echo "Core Node will be setup for Mainnet"
+      echo "Core Node will be setup for Mainnet 2"
       
     fi
 
