@@ -75,15 +75,6 @@ then
   GIT_VERSION_NUM=$( echo ${GIT_VERSION_TAG} | sed 's/v//g' )
 fi
 
-# Check if v3.1+ is available on Github
-if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
-  export ENERGI_EXE=energi
-  export ENERGIPATH=Energi
-else
-  export ENERGI_EXE=energi3
-  export ENERGIPATH=Energi3
-fi
-
 # Set colors
 BLUE=`tput setaf 4`
 RED=`tput setaf 1`
@@ -1624,6 +1615,15 @@ isMainnet="y"
 INTERACTIVE="y"
 BOOTSTRAP="n"
 POSITIONAL=()
+
+# Check if v3.1+ is available on Github
+if _version_gt ${GIT_VERSION_NUM} 3.0.99; then
+  export ENERGI_EXE=energi
+  export ENERGIPATH=Energi
+else
+  export ENERGI_EXE=energi3
+  export ENERGIPATH=Energi3
+fi
 
 while [[ $# -gt 0 ]]
 do
