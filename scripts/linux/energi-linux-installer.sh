@@ -435,7 +435,7 @@ _set_ismainnet () {
       export APPARG=''
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.energi.network/"
-      echo "Core Node will be setup for Mainnet 1"
+      echo "Core Node will be setup for Mainnet"
     else
       export CONF_DIR=${USRHOME}/.energicore3/testnet
       export FWPORT=49797
@@ -448,7 +448,7 @@ _set_ismainnet () {
 
   elif [[ "${INSTALLTYPE}" == 'upgrade' ]]
   then
-    if [[ -d "${USRNAME}/.energicore3/testnet" ]]
+    if [[ -d "${USRHOME}/.energicore3/testnet" ]]
     then
       export CONF_DIR=${USRHOME}/.energicore3/testnet
       export FWPORT=49797
@@ -463,7 +463,7 @@ _set_ismainnet () {
       export FWPORT=39797
       export BOOTSTRAP_URL="https://s3-us-west-2.amazonaws.com/download.energi.software/releases/chaindata/mainnet/gen3-chaindata.tar.gz"
       export NEXUS_URL="https://nexus.energi.network/"
-      echo "Core Node will be setup for Mainnet 2"
+      echo "Core Node will be setup for Mainnet"
       
     fi
 
