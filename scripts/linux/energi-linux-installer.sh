@@ -17,7 +17,7 @@
 #   1.3.1  20210120  ZA update keystore download
 #   1.3.2  20210121  ZA update to set API_URL externally
 #   1.3.3  20200129  ZA bug fix and enhancements; supports both v3.0.x and v3.1+
-#   1.3.4  20200202  ZA systemd service filename for v3.0.x updated
+#   1.3.4  20200204  ZA systemd service filename for v3.0.x updated
 #
 : '
 # Run the script to get started:
