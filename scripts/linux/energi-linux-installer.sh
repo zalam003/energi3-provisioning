@@ -628,13 +628,13 @@ ExecStartPre=/bin/chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log/energi_std
 ExecStartPre=/bin/chmod 640 ${CONF_DIR}/energi3/log/energi_stdout.log
 StandardOutput=file:${CONF_DIR}/energi3/log/energi_stdout.log
 StandardError=file:${CONF_DIR}/energi3/log/energi_stdout.log
-ExecStart=${BIN_DIR}/${ENERGI_EXE} ${APPARG}\
-  --datadir ${CONF_DIR} \
-  --gcmode archive \
-  --maxpeers 128 \
-  --masternode \
-  --mine \
-  --nat extip:${EXTIP} \
+ExecStart=${BIN_DIR}/${ENERGI_EXE} ${APPARG} \\
+  --datadir ${CONF_DIR} \\
+  --gcmode archive \\
+  --maxpeers 128 \\
+  --masternode \\
+  --mine \\
+  --nat extip:${EXTIP} \\
   --verbosity 0
 WorkingDirectory=${USRHOME}
 
@@ -1864,7 +1864,6 @@ case ${INSTALLTYPE} in
         _secure_host
         _check_clock
         _add_swap
-        _add_logrotate
         _upgrade_energi
         
         if [[ -f ${CONF_DIR}/removedb-list.db ]]
@@ -1887,6 +1886,7 @@ case ${INSTALLTYPE} in
           done
         fi
         
+        _add_logrotate
         _add_systemd
         _start_energi
         _start_nodemon
