@@ -446,7 +446,7 @@ _set_ismainnet () {
       echo "Core Node will be setup for Testnet"
     fi
 
-  elif [[ "${INSTALLTYPE}" == "upgrade" ]]
+  elif [[ "${INSTALLTYPE}" == 'upgrade' ]]
   then
     if [[ -d "${USRNAME}/.energicore3/testnet" ]]
     then
