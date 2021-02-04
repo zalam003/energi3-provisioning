@@ -1655,7 +1655,7 @@ do
         sleep 0.3
         _stop_energi
         sleep 0.3
-        ${ENERGI_EXE} removedb
+        ${ENERGI_EXE} ${APPARG} removedb
         sleep 0.3
         _download_bootstrap
         sleep 0.3
