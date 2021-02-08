@@ -20,9 +20,13 @@
 #   1.0.7  20200502  ZAlam Added reset functionality
 #   1.1.0  20200504  ZAlam First Public Release
 #   1.1.1  20200505  ZAlam Update email content
+#   1.1.2  20200507  ZAlam Masternode ETA
+#   1.2.0  20200521  ZAlam name change to energi
+#   1.2.1  20201015  ZAlam Updated MN Reward time calculation
+#   1.3.0  20210208  ZAlam Update USRNAME & DATADIR; support all versions
 #
 # Set script version
-NODEMONVER=1.1.1
+NODEMONVER=1.3.0
 
  : '
 # Run this file
@@ -65,13 +69,36 @@ NODEMONVER=1.1.1
  DISCORD_TITLE_LIMIT=266
  
  # NRG Parameters
- NRGAPI="https://explorer.energi.network/api"
  GITAPI_URL="https://api.github.com/repos/energicryptocurrency/energi3/releases/latest"
  
  # Set variables
  MNTOTALNRG=0
- USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | awk -F\/ '{print $3}' )
- export PATH=$PATH:/home/${USRNAME}/energi3/bin
+ # get username; exclude testnet
+ USRNAME=$( find /home -name nodekey  2>&1 | grep -v "Permission denied" | grep -v testnet | awk -F\/ '{print $3}' )
+ if [[ -z ${USRNAME} ]]
+ then
+  USRNAME=$( echo nrgstaker )
+ fi
+ 
+ # check for energi
+ BINLOC=$( find /home/${USRNAME} -type f -name energi -executable 2>&1 | grep -v "Permission denied" )
+ ENERGI_EXEC="energi"
+
+ # check for energi3 if energi not installed
+ if [[ ! -z ${BINLOC} ]]
+ then
+   echo "Using binary name: energi"
+ else
+   BINLOC=$( find /home/${USRNAME} -type f -name energi3 -executable 2>&1 | grep -v "Permission denied" )
+   ENERGI_EXEC="energi3"
+   echo "Using binary name: energi3"
+ fi
+
+ # Extract path to binary
+ EXECPATH=$( dirname ${BINLOC} )
+
+ # set PATH
+ export PATH=$PATH:${EXECPATH}
  LOGDIR="/home/${USRNAME}/log"
  LOGFILE="${LOGDIR}/nodemon.log"
 
@@ -105,15 +132,40 @@ NODEMONVER=1.1.1
       exit 0
     fi
   fi
- 
+
  # Set datadir
  DATADIR=$( ps -ef | grep datadir | grep -v "grep datadir" | grep -v "color" )
  DATADIR=$( echo $DATADIR | awk -F'datadir' '{print $2}' | awk -F' ' '{print $1}' )
+ # Validate DATADIR, if not try with default
+ if [[ ! -f ${DATADIR}/energi3/nodekey ]]
+ then
+    DATADIR=$( echo /home/nrgstaker/.energicore3 )
+    if [[ ! -f ${DATADIR}/energi3/nodekey ]]
+    then
+        echo "Cannot determine DATADIR"
+        DATADIR=''
+    fi
+ fi
+ 
  
  # Attach command
- COMMAND="energi3 ${ARG} --datadir ${DATADIR} attach --exec "
- NODEAPICOMMAND="energi3 attach https://nodeapi.energi.network --exec "
-
+ if [[ -z ${DATADIR} ]]
+ then
+    COMMAND="${ENERGI_EXEC} ${ARG} attach --exec "
+ else
+    COMMAND="${ENERGI_EXEC} ${ARG} --datadir ${DATADIR} attach --exec "
+ fi
+ 
+ # Check if testnet
+ if [[ ${ARG} == '--testnet' ]]
+ then
+   NODEAPICOMMAND="${ENERGI_EXEC} attach https://nodeapi.energi.network --exec "
+   NRGAPI="https://explorer.energi.network/api"
+ else
+   NODEAPICOMMAND="${ENERGI_EXEC} attach https://nodeapi.test.energi.network --exec "
+   NRGAPI="https://explorer.test.energi.network/api"
+ fi
+ 
  # version arg.
  VERSION_OUTPUT=0
  if [[ "${arg1}" == 'version' ]]
@@ -176,6 +228,12 @@ fi
 then
   TEST_OUTPUT=1
 fi
+
+ # Get bc.
+ if [ ! -x "$( command -v bc )" ]
+ then
+   sudo DEBIAN_FRONTEND=noninteractive apt-get install -yq bc
+ fi
 
  # Set defaults.
  # RAM.
@@ -350,18 +408,18 @@ fi
  then
   SQL_QUERY "INSERT OR IGNORE INTO variables values ( 'last_block_checked', '${CURRENTBLKNUM}' );"
  else
-  echo "energi3 is not running.  Exiting nodemon."
+  echo "energi is not running.  Exiting nodemon."
   exit 0
  fi
 
  # Daemon_bin_name URL_to_logo Bot_name
  DAEMON_BIN_LUT="
-energi3 https://s2.coinmarketcap.com/static/img/coins/128x128/3218.png Energi Monitor
+energi https://s2.coinmarketcap.com/static/img/coins/128x128/3218.png Energi Monitor
 "
 
  # Daemon_bin_name minimum_balance_to_stake staking_reward mn_reward_factor confirmations cooloff_seconds networkhashps_multiplier ticker_name blocktime_seconds
  DAEMON_BALANCE_LUT="
-energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
+energi 1 2.28 0.914 101 3600 0.000001 NRG 60
 "
 
  # Add timestamp to Log
@@ -396,14 +454,14 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
  
   # Install nodemon.sh
   INSTALL_VER=$( /var/multi-masternode-data/nodebot/nodemon.sh version | awk '{print $2}' )
-  if [[ -f "${HOME}/energi3/bin/nodemon.sh" ]]
+  if [[ -f "${HOME}/energi/bin/nodemon.sh" ]]
   then
-    BIN_VER=$( ${HOME}/energi3/bin/nodemon.sh version | awk '{print $2}' )
+    BIN_VER=$( ${HOME}/energi/bin/nodemon.sh version | awk '{print $2}' )
     if _version_gt ${BIN_VER} ${INSTALL_VER}
     then
-    sudo cp "${HOME}/energi3/bin/nodemon.sh" /var/multi-masternode-data/nodebot/nodemon.sh
+    sudo cp "${HOME}/energi/bin/nodemon.sh" /var/multi-masternode-data/nodebot/nodemon.sh
     else
-      echo "Version installed is same as in ${HOME}/energi3/bin"
+      echo "Version installed is same as in ${HOME}/energi/bin"
       echo "Version installed: ${INSTALL_VER}"
     fi
   else
@@ -429,9 +487,9 @@ energi3 1 2.28 0.914 101 3600 0.000001 NRG 60
   if [[ ! -d ${LOGDIR} ]]
   then
     mkdir -p ${LOGDIR}
-    chown ${USRNAME}:${USRNAME} ${LOGDIR}
     touch ${LOGFILE}
-    chown ${USRNAME}:${USRNAME} ${LOGFILE}
+    sudo chown ${USRNAME}:${USRNAME} ${LOGDIR}
+    sudo chown ${USRNAME}:${USRNAME} ${LOGFILE}
   fi
 
   # Setup log rotate
@@ -455,17 +513,20 @@ NODEMON_LOGROTATE
   
   fi
   
-  cat << SUDO_CONF | sudo tee /etc/sudoers.d/nrgstaker >/dev/null
-nrgstaker ALL=NOPASSWD: ALL
+  if [[ ! -f /etc/sudoers.d/${USRNAME} ]]
+  then
+    cat << SUDO_CONF | sudo tee /etc/sudoers.d/${USRNAME} >/dev/null
+${USRNAME} ALL=NOPASSWD: ALL
 SUDO_CONF
+  fi
 
   cat << SYSTEMD_CONF | sudo tee /etc/systemd/system/nodemon.service >/dev/null
 [Unit]
 Description=Core Node Monitor
-After=syslog.target network.target energi3.service
+After=syslog.target network.target energi.service
 
 [Service]
-SyslogIdentifier=cftimer-energi3-node-monitor
+SyslogIdentifier=cftimer-energi-node-monitor
 Type=oneshot
 Restart=no
 RestartSec=5
@@ -480,6 +541,7 @@ SYSTEMD_CONF
 [Unit]
 Description=Run Core Node Monitor Every 10 Minute
 Requires=nodemon.service
+After=energi.service
 
 [Timer]
 Unit=nodemon.service
@@ -1918,7 +1980,7 @@ ${RKHUNTER_OUTPUT}"
         # Get price once
         if [[ -z "${NRGMKTPRICE}" ]]
         then
-          NRGMKTPRICE=$( curl -H "Accept: application/json" --connect-timeout 30 -s "https://min-api.cryptocompare.com/data/price?fsym=NRG&tsyms=${CURRENCY}" | jq .${CURRENCY} )
+          NRGMKTPRICE=$( curl -H "Accept: application/json" --connect-timeout 30 -s "https://min-api.cryptocompare.com/data/price?fsym=NRG&tsyms=${CURRENCY}&ts=${REWARDTIME}" | jq .${CURRENCY} )
         fi
 
         # No way to determine at the time. Assume default
@@ -2058,10 +2120,16 @@ Next Stake ETA: ${TIME_TO_STAKE}"
             
             _MNREWARDS=$( SQL_REPORT "SELECT blockNum,Reward FROM mn_rewards WHERE blockNum BETWEEN ${STARTMNBLK} and ${ENDMNBLK};" )
             
+            ACTIVECOLL=$( ${COMMAND} "masternode.stats().activeCollateral" 2>/dev/null )
+            
+            SEC_TO_MNREWARD=$( echo "(`printf "%.0f\n" ${ACTIVECOLL}`) / 10000000000000000000000 * 60 "  | bc -l | sed '/\./ s/\.\{0,1\}0\{1,\}$//')
+            TIME_TO_MNREWARD=$( DISPLAYTIME "${SEC_TO_MNREWARD}" )
+            
             _PAYLOAD="__Account: ${SHORTADDR}__
 Mkt Price: ${CURRENCY} ${NRGMKTPRICE}
 Masternode Collateral: ${MNCOLLATERAL} NRG
-Masternode reward: ${MNTOTALNRG} NRG
+Masternode Reward: ${MNTOTALNRG} NRG
+Next Reward ETA: ${TIME_TO_MNREWARD}
 ${_MNREWARDS}"
             
             # Post message
@@ -2268,6 +2336,10 @@ Connections: ${GETCONNECTIONCOUNT}"
  
   elif [[ ${NODEHASH} == ${NODEAPIHASH} ]]
   then
+    FIRSTNODEHASH=$( echo ${NODEHASH:2:8} )
+    LASTNODEHASH=$( echo ${NODEHASH:${#NODEHASH} - 8} )
+    FIRSTNODEAPIHASH=$( echo ${NODEAPIHASH:2:8} )
+    LASTNODEAPIHASH=$( echo ${NODEAPIHASH:${#NODEAPIHASH} - 8} )
   
     _PAYLOAD="__${USRNAME} ${DAEMON_BIN}__
 Chain back to normal.
@@ -2358,7 +2430,7 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
   fi
 
   # Get the version number.
-  VERSION=$( energi3 version  2>/dev/null | grep "^Version:" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' )
+  VERSION=$( energi version  2>/dev/null | grep "^Version:" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' )
   if [[ -z "${VERSION}" ]]
   then
     VERSION=$( ${COMMAND} "admin.nodeInfo.name" 2>/dev/null | awk -F\/ '{print $2}' | sed 's/[^0-9.]*\([0-9.]*\).*/\1/' )
@@ -2426,14 +2498,14 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
 
   # Get daemon bin name and pid from lock in toml folder.
   CONF_FOLDER=$( dirname "${CONF_LOCATION}" )
-  DAEMON_BIN=energi3
+  DAEMON_BIN=energi
   CONTROLLER_BIN="${DAEMON_BIN}"
-  DAEMON_PID=$( ps -ef | grep energi3 | grep -v "grep energi3" | grep -v "grep --color=auto energi3" | grep -v "attach" | awk '{print $2}' )
+  DAEMON_PID=$( ps -ef | grep energi | grep -v "grep energi" | grep -v "grep --color=auto energi" | grep -v "attach" | awk '{print $2}' )
 
   # Get path to daemon bin.
   if [[ ! -z "${DAEMON_PID}" ]]
   then
-    DAEMON_BIN_LOC=$( ps -ef | grep energi3 | grep -v "grep energi3" | grep -v "grep --color=auto energi3" | grep -v "attach" | awk '{print $8}' )
+    DAEMON_BIN_LOC=$( ps -ef | grep energi | grep -v "grep energi" | grep -v "grep --color=auto energi" | grep -v "attach" | awk '{print $8}' )
     CONTROLLER_BIN_LOC="${DATADIR}"
     COMMAND_FOLDER=$( dirname "${DAEMON_BIN_LOC}" )
     CONTROLLER_BIN_FOLDER=$( find "${COMMAND_FOLDER}" -executable -type f 2>/dev/null | grep -Ei "${DAEMON_BIN}$" )
@@ -2479,7 +2551,7 @@ Uptime: $( DISPLAYTIME "${UPTIME}" )"
 
   if [[ -z ${DAEMON_BIN} ]]
   then
-    DAEMON_BIN="energi3"
+    DAEMON_BIN="energi"
   fi
 
   echo

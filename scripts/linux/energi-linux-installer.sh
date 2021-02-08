@@ -18,15 +18,18 @@
 #   1.3.2  20210121  ZA update to set API_URL externally
 #   1.3.3  20200129  ZA bug fix and enhancements; supports both v3.0.x and v3.1+
 #   1.3.4  20200204  ZA systemd service filename for v3.0.x updated
+#   1.3.5  20200205  ZA Updated --help
+#   1.3.6  20200208  ZA Add: create log directory in systemd
 #
 : '
 # Run the script to get started:
 ```
-bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/zalam003/energi3-provisioning/master/scripts/linux/energi-linux-installer.sh)" ['' arguments]; source ~/.bashrc
+bash -ic "$(wget -4qO- -o- raw.githubusercontent.com/energicryptocurrency/energi3-provisioning/master/scripts/linux/energi-linux-installer.sh)" ['' arguments]; source ~/.bashrc
 
-Energi installer arguments:
+Syntax: energi-linux-installer.sh ['' arguments]
+Energi installer arguments (optional):
     -b  --bootstrap           : Sync node using Bootstrap
-    -n  --no-interaction      : No interaction mode
+    -n  --no-interaction      : No interaction mode (not implemented)
     -t  --testnet             : Setup testnet
     -r  --rsa                 : Setup token based login
     -f  --2fa                 : Setup 2-Factor Authentication
@@ -616,6 +619,7 @@ RestartSec=5
 User=${USRNAME}
 Group=${USRNAME}
 UMask=0027
+ExecStartPre=/bin/mkdir -p ${CONF_DIR}/energi3/log 2>/dev/null
 ExecStartPre=/bin/chown ${USRNAME}:${USRNAME} ${CONF_DIR}/energi3/log
 ExecStartPre=/bin/chmod 750 ${CONF_DIR}/energi3/log
 ExecStartPre=/bin/touch ${CONF_DIR}/energi3/log/energi_stdout.log
@@ -1714,9 +1718,11 @@ do
         clear 2> /dev/null
         cat << HELPMSG
 
-Energi installer arguments:
+Syntax: energi-linux-installer.sh ['' arguments]
+
+arguments (optional):
     -b  --bootstrap           : Sync node using Bootstrap
-    -n  --no-interaction      : No interaction mode
+    -n  --no-interaction      : No interaction mode (not implemented)
     -t  --testnet             : Setup testnet
     -r  --rsa                 : Setup token based login
     -f  --2fa                 : Setup 2-Factor Authentication
